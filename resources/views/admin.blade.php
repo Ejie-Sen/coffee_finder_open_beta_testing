@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin — Coffee Finder Injection</title>
@@ -210,6 +211,17 @@
         <div class="alert-success">✓ {{ session('success') }}</div>
     @endif
 
+    @if($errors->any())
+        <div style="background: #f8d7da; color: #721c24; padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; font-size: 14px;">
+            <strong>⚠️ Deployment Failed:</strong>
+            <ul style="margin-top: 8px; margin-left: 20px;">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <form action="{{ route('shops.store') }}" method="POST" autocomplete="off">
         @csrf
 
@@ -306,11 +318,23 @@
             <div class="card-body">
                 <div class="tag-grid">
                     @php
+                        // Duplicates (like the second 'Aircon' and 'Coffee & Tea') have been purged to prevent rendering bugs.
                         $availableTags = [
-                            'Fast WiFi' => '⚡', 'Power Outlets' => '🔌', 'Study Tables' => '📚', 
-                            'Quiet Vibe' => '🤫', 'Air Conditioning' => '❄️', 'Outdoor Seating' => '🍃', 
-                            'Parking' => '🚗', 'Pet Friendly' => '🐾', 'Specialty Coffee' => '☕', 
-                            'Pastry Fresh Daily' => '🥐', 'Date Spot' => '💕', 'Family-Friendly' => '👨‍👩‍👧'
+                            'Fast Wi-Fi' => '📶', 'Many Outlets' => '🔌', 'Quiet Vibe' => '🤫', 'Aircon' => '❄️',
+                            'Wi-Fi Ready' => '📶', 'Charging Points' => '🔌', 'Dim Lighting' => '🕯️',
+                            'Ultra-Fast Wi-Fi' => '📶', 'Standing Desk Area' => '🔌', 'Enforced Quiet Zone' => '🤫',
+                            'Printer Available' => '🖨️', '50Mbps Wi-Fi' => '📶', 'Outlet-Per-Seat' => '🔌',
+                            'Specialty Coffee' => '☕', 'Study Tables' => '📚', 'Signature Cakes' => '🍰',
+                            'Milktea' => '🧋', 'Family-Friendly' => '👨‍👩‍👧', 'Pastry Fresh Daily' => '🍰',
+                            'Coffee & Tea' => '☕', 'Takeout Boxes' => '🎁', 'Date Spot' => '💕',
+                            'Floral Pastries' => '🌸', 'Seasonal Flavors' => '🍓', 'Gift Boxes' => '🎁',
+                            'Fresh-Baked Daily' => '🍪', 'Milk Pairings' => '🥛', 'Homey Atmosphere' => '😌',
+                            'Cupcakes Too' => '🧁', 'Instagrammable' => '📸', 'Plush Seating' => '🛋️',
+                            'Botanical Decor' => '🌿', 'Natural Light' => '🔆', 'Dark Aesthetic' => '🖤',
+                            'Candlelit Corners' => '🕯️', 'Curated Playlist' => '🎵', 'Photo Walls' => '📸',
+                            'Homey Interiors' => '🏡', 'Bean Bags' => '🛋️', 'Warm Lighting' => '🕯️',
+                            'Chill Playlist' => '🎶', 'Floor-to-Ceiling Windows' => '🌅', 'Mirror Walls' => '🪞',
+                            'Fresh Florals Weekly' => '🌼', 'Tripod-Friendly' => '📸'
                         ];
                     @endphp
                     @foreach($availableTags as $tagName => $icon)
@@ -321,6 +345,72 @@
             </div>
         </div>
 
+
+
+        <!-- Section: Statistics -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📊</div>
+                <div>
+                    <div class="card-title">Shop Statistics</div>
+                    <div class="card-subtitle">Promotional metrics (leave blank if unknown)</div>
+                </div>
+            </div>
+            <div class="card-body">
+                
+                <!-- 1. The Typed Input -->
+                <div class="field">
+                    <label class="field-label">Google Rating</label>
+                    <input type="text" name="stats[Google Rating]" placeholder="e.g. 4.8" style="max-width: 200px;">
+                </div>
+
+                <!-- 2. The Button Inputs -->
+                <div class="field" style="margin-top: 1rem;">
+                    <label class="field-label">Price Range</label>
+                    <div class="tag-grid">
+                        <input class="tag-checkbox" type="radio" name="stats[Price Range]" value="Below ₱100" id="price-1">
+                        <label class="tag-pill" for="price-1">Below ₱100</label>
+
+                        <input class="tag-checkbox" type="radio" name="stats[Price Range]" value="₱100 - ₱200" id="price-2">
+                        <label class="tag-pill" for="price-2">₱100 - ₱200</label>
+
+                        <input class="tag-checkbox" type="radio" name="stats[Price Range]" value="₱200+" id="price-3">
+                        <label class="tag-pill" for="price-3">₱200+</label>
+                    </div>
+                </div>
+
+                <div class="field" style="margin-top: 1rem;">
+                    <label class="field-label">Noise Level</label>
+                    <div class="tag-grid">
+                        <input class="tag-checkbox" type="radio" name="stats[Noise Level]" value="Quiet" id="noise-1">
+                        <label class="tag-pill" for="noise-1">🤫 Quiet</label>
+
+                        <input class="tag-checkbox" type="radio" name="stats[Noise Level]" value="Moderate" id="noise-2">
+                        <label class="tag-pill" for="noise-2">🗣️ Moderate</label>
+
+                        <input class="tag-checkbox" type="radio" name="stats[Noise Level]" value="Loud" id="noise-3">
+                        <label class="tag-pill" for="noise-3">🎶 Loud</label>
+                    </div>
+                </div>
+
+                <div class="field" style="margin-top: 1rem;">
+                    <label class="field-label">Wi-Fi Speed</label>
+                    <div class="tag-grid">
+                        <input class="tag-checkbox" type="radio" name="stats[Wi-Fi Speed]" value="Basic" id="wifi-1">
+                        <label class="tag-pill" for="wifi-1">📶 Basic</label>
+
+                        <input class="tag-checkbox" type="radio" name="stats[Wi-Fi Speed]" value="Fast" id="wifi-2">
+                        <label class="tag-pill" for="wifi-2">⚡ Fast</label>
+
+                        <input class="tag-checkbox" type="radio" name="stats[Wi-Fi Speed]" value="Ultra" id="wifi-3">
+                        <label class="tag-pill" for="wifi-3">🚀 Ultra</label>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+            <!-- Section: Utility & Conversion -->
         <div class="card">
             <div class="card-header">
                 <div class="card-icon">📍</div>

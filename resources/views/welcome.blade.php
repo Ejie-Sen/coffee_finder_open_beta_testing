@@ -31,7 +31,15 @@
                 @if(!empty($searchQuery))
                     Search Results for <span>"{{ $searchQuery }}"</span>
                 @else
-                    Spots for <span>{{ ucfirst($currentMood) }}</span>
+                    @php
+                        $moodTitles = [
+                            'work' => 'Focus & Productivity',
+                            'eat' => 'Cravings & Desserts',
+                            'chill' => 'Aesthetic & Social'
+                        ];
+                        $displayTitle = $moodTitles[$currentMood] ?? ucfirst($currentMood);
+                    @endphp
+                    Spots for <span>{{ $displayTitle }}</span>
                 @endif
             </h2>
             <span class="results-count">Showing {{ $shops->count() }} spots</span>
@@ -45,7 +53,7 @@
         @else
             <div class="cards-grid">
                 @foreach($shops as $shop)
-                    <div class="spot-card" onclick='openModal(@json($shop))'>
+                    <div class="spot-card" data-shop="{{ $shop->toJson() }}" onclick="openModal(this)">
                         @if($shop->image_url)
                             <img src="{{ $shop->image_url }}" alt="{{ $shop->name }}" class="card-image" />
                         @else
@@ -101,13 +109,36 @@
 @push('scripts')
 <script>
 
+    //close modal function
+    // fix para sa onlick="closeModal()" tangina -ejie
+    function closeModal() {
+        document.getElementById('shopModal').classList.remove('open');
+    }
+
+    //handle search form submission
+    function handleSearch(event) {
+    event.preventDefault();
+    const query = document.querySelector('.search-input').value;
+    fetchSpots(event, null, `/?search=${encodeURIComponent(query)}`);
+    return false;
+    }
+
+    //FETCH SPOTS VIA AJAX
     async function fetchSpots(event, clickedElement, url) {
     // 1. Stop the hard browser reload
     event.preventDefault();
 
     // 2. Visually update the active button immediately
+    if (clickedElement){
     document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('active'));
     clickedElement.classList.add('active');
+    }
+    // added the Auto-Scroll on Mood Selection -ejie
+    document.getElementById('results').scrollIntoView({ 
+    behavior: 'smooth', 
+    block: 'start' 
+    });
+
 
     const resultsSection = document.getElementById('results');
     
@@ -117,7 +148,13 @@
 
     try {
         // 4. Fetch the new HTML from the Laravel server asynchronously
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            headers: {
+             'X-Requested-With': 'XMLHttpRequest',
+             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+             }
+        });
+        
         const html = await response.text();
 
         // 5. Parse the returned HTML into a virtual DOM
@@ -137,16 +174,29 @@
         // 9. Auto-scroll to the results seamlessly
         resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    } catch (error) {
-        console.error('Fetch failed, falling back to hard reload:', error);
-        window.location.href = url; // Fallback to standard navigation if JS fails
+    } //catch (error) {
+    // console.error('Fetch failed, falling back to hard reload:', error);
+    // window.location.href = url; // Fallback to standard navigation if JS fails
+    //}}
+    catch (error) {
+    console.error('Fetch failed:', error);
+    alert('⚠️ Failed to load spots. Refreshing page...');
+    window.location.href = url;
+}// better error handling with user feedback -ej
     }
-}
-
 // Handle the browser Back/Forward buttons gracefully
-window.addEventListener('popstate', () => {
-    window.location.reload(); 
-});
+    //window.addEventListener('popstate', () => {
+    //window.location.reload(); }); This will destroy the SPA experience -ejie  
+    window.addEventListener('popstate', (event) => {
+    if(event.state && event.state.url) {
+        fetchSpots(new Event('popstate'), null, event.state.url);
+    } else {
+        window.location.reload();
+    }
+    });// This will attempt to fetch the previous state via AJAX, but if it fails (e.g. user directly navigates to a URL), it will do a full reload. -ejie
+
+// Properly initialize the first page state using the real window location
+window.history.replaceState({ url: window.location.pathname + window.location.search }, '', window.location.href);
 
     const tagIcons = {
     'Fast WiFi': '⚡', 'Air Conditioning': '❄️', 'Outdoor Seating': '🍃', 
@@ -164,7 +214,10 @@ window.addEventListener('popstate', () => {
     'Floor-to-Ceiling Windows': '🪟', 'Mirror Walls': '🪞', 'Fresh Florals Weekly': '💐', 'Tripod-Friendly': '📸'
 };
 
-function openModal(shop) {
+function openModal(element) {
+    // 1. Safely extract and parse the data from the clicked card
+    const shop = JSON.parse(element.getAttribute('data-shop'));
+
     // Populate Core Data
     document.getElementById('modalName').innerText = shop.name;
     document.getElementById('modalBadge').innerText = '⭐ ' + (shop.badge || 'New Spot');
@@ -173,6 +226,7 @@ function openModal(shop) {
 
     // Handle Image vs Emoji
     const hero = document.getElementById('modalHero');
+
     if(shop.image_url) {
         hero.style.padding = '0';
         hero.innerHTML = `<img src="${shop.image_url}" style="width:100%; height:100%; object-fit:cover;">`;

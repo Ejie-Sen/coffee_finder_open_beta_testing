@@ -10,7 +10,8 @@ class ShopStat extends Model
     public $timestamps = false;
 
     // 2. Allow mass assignment for your columns
-    protected $guarded = [];
+    // protected $guarded = [];  | SQL injection risk fix! -ejie
+    protected $fillable = ['shop_id', 'label', 'stat_value'];
     
     // 3. Ensure the JSON 'tags' column is cast to a PHP array automatically
     protected $casts = [

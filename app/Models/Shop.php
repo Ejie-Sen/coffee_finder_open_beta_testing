@@ -10,17 +10,12 @@ class Shop extends Model
     public $timestamps = false;
 
     // 2. Allow mass assignment for your columns
-    protected $guarded = [];
-    
+    // protected $guarded = [];  | SQL injection risk fix! -ejie
+    protected $fillable = ['name', 'mood', 'badge', 'emoji', 'image_url', 'tagline', 'must_try', 'maps_url', 'tags'];
     // 3. Ensure the JSON 'tags' column is cast to a PHP array automatically
     protected $casts = [
         'tags' => 'array',
     ];
-
-    public function menuItems()
-    {
-        return $this->hasMany(MenuItem::class);
-    }
 
     public function stats()
     {
