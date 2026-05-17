@@ -222,6 +222,58 @@
         </div>
     @endif
 
+    <!-- Section: Manage Existing Shops -->
+    <div class="card" style="margin-bottom: 3rem;">
+        <div class="card-header">
+            <div class="card-icon">🗄️</div>
+            <div>
+                <div class="card-title">Manage Deployed Shops</div>
+                <div class="card-subtitle">View, edit, and remove active spots</div>
+            </div>
+        </div>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+                <thead>
+                    <tr style="background: var(--surface-alt); border-bottom: 1px solid var(--border);">
+                        <th style="padding: 1rem 1.5rem; color: var(--text-secondary);">ID</th>
+                        <th style="padding: 1rem 1.5rem; color: var(--text-secondary);">Shop Name</th>
+                        <th style="padding: 1rem 1.5rem; color: var(--text-secondary);">Mood</th>
+                        <th style="padding: 1rem 1.5rem; color: var(--text-secondary);">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($shops as $shop)
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 1rem 1.5rem; font-weight: 600; color: var(--text-muted);">#{{ $shop->id }}</td>
+                        <td style="padding: 1rem 1.5rem; font-weight: bold; color: var(--espresso);">{{ $shop->name }}</td>
+                        <td style="padding: 1rem 1.5rem;"><span class="tag-pill">{{ ucfirst($shop->mood) }}</span></td>
+                        <td style="padding: 1rem 1.5rem; display: flex; gap: 10px;">
+                            <a href="{{ route('shops.edit', $shop->id) }}" style="padding: 6px 12px; font-size: 12px; background: #e2e8f0; color: #475569; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; font-weight: bold; transition: 0.2s;" onmouseover="this.style.background='#cbd5e1'" onmouseout="this.style.background='#e2e8f0'">
+                                Edit
+                            </a>
+                            <button type="button" onclick="openDeleteModal({{ $shop->id }}, '{{ addslashes($shop->name) }}')" style="padding: 6px 12px; font-size: 12px; background: #fee2e2; color: #991b1b; border: none; border-radius: 6px; cursor: pointer; font-family: inherit; transition: 0.2s;" onmouseover="this.style.background='#fca5a5'" onmouseout="this.style.background='#fee2e2'">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                    @endforeach
+
+                    @if($shops->isEmpty())
+                    <tr>
+                        <td colspan="4" style="padding: 2rem; text-align: center; color: var(--text-muted);">No shops deployed yet. Your database is empty.</td>
+                    </tr>
+                    @endif
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 2rem;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <div style="font-family: 'Playfair Display'; font-weight: 700; color: var(--caramel);">OR ADD NEW</div>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+    </div>
+
     <form action="{{ route('shops.store') }}" method="POST" autocomplete="off">
         @csrf
 
@@ -440,6 +492,33 @@
     </form>
 </div>
 
+        <div id="customDeleteModal" style="position: fixed; inset: 0; background: rgba(28,13,0,0.8); backdrop-filter: blur(5px); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 1rem; opacity: 0; transition: opacity 0.3s ease;">
+        <div style="background: var(--surface); width: 100%; max-width: 400px; padding: 2rem; border-radius: var(--radius-lg); box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; transform: translateY(20px); transition: transform 0.3s ease;" id="deleteModalBox">
+            
+            <div style="width: 50px; height: 50px; background: #fee2e2; color: #991b1b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 1rem;">
+                ⚠️
+            </div>
+            
+            <h3 style="font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--espresso); margin-bottom: 0.5rem;">Confirm Deletion</h3>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.5;">
+                Are you sure you want to permanently delete <strong id="deleteShopName" style="color: var(--espresso);"></strong>? This action cannot be undone and will destroy all associated statistics.
+            </p>
+
+            <form id="globalDeleteForm" method="POST" action="">
+                @csrf
+                @method('DELETE')
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" onclick="closeDeleteModal()" style="flex: 1; padding: 12px; background: var(--surface-alt); color: var(--text-primary); border: 1px solid var(--border); border-radius: 100px; font-weight: 700; cursor: pointer; transition: 0.2s;">
+                        Cancel
+                    </button>
+                    <button type="submit" style="flex: 1; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 100px; font-weight: 700; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+                        Yes, Delete
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 <script>
     function previewImage(url) {
         const img = document.getElementById('preview-img');
@@ -454,6 +533,38 @@
             hint.style.display = 'block';
         }
     }
+        function openDeleteModal(id, name) {
+            const modal = document.getElementById('customDeleteModal');
+            const modalBox = document.getElementById('deleteModalBox');
+            
+            // 1. Inject the specific shop name into the warning text
+            document.getElementById('deleteShopName').innerText = name;
+            
+            // 2. Dynamically change the form's destination URL so it deletes the correct ID
+            document.getElementById('globalDeleteForm').action = '/admin/shops/' + id;
+            
+            // 3. Show the modal with a smooth fade/slide animation
+            modal.style.display = 'flex';
+            // Slight delay ensures the display flex registers before applying opacity for CSS transitions
+            setTimeout(() => {
+                modal.style.opacity = '1';
+                modalBox.style.transform = 'translateY(0)';
+            }, 10);
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('customDeleteModal');
+            const modalBox = document.getElementById('deleteModalBox');
+            
+            // Animate out
+            modal.style.opacity = '0';
+            modalBox.style.transform = 'translateY(20px)';
+            
+            // Wait for animation to finish before hiding completely
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
 </script>
 </body>
 </html>

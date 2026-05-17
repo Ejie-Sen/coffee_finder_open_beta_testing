@@ -32,6 +32,14 @@ class ShopController extends Controller
         return view('welcome', compact('shops', 'currentMood', 'searchQuery'));
     }
 
+    public function adminIndex()
+    {
+        // Fetch all shops from the database, newest first
+        $shops = Shop::orderBy('id', 'desc')->get();
+        
+        // Pass them to the admin view
+        return view('admin', compact('shops'));
+    }
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -74,5 +82,64 @@ class ShopController extends Controller
         }
 
         return redirect('/admin')->with('success', 'Shop deployed to database successfully.');
+    }
+
+    public function destroy($id)
+    {
+        // 1. Find the specific shop by its ID, or fail safely if it doesn't exist
+        $shop = Shop::findOrFail($id);
+        
+        // 2. Delete it from the database
+        $shop->delete();
+
+        // 3. Redirect back to the admin dashboard with a success message
+        return redirect()->route('admin.index')->with('success', "{$shop->name} has been permanently deleted.");
+    }
+
+    public function edit($id)
+    {
+        // 1. Find the specific shop AND load its connected tables (vibes and stats)
+        $shop = Shop::with(['vibes', 'stats'])->findOrFail($id);
+        
+        // 2. We need to extract just the tag names into a simple array so our checkboxes know which ones to check
+        $activeTags = $shop->vibes->pluck('tag_name')->toArray();
+        
+        // 3. Send the data to a new 'edit' view
+        return view('edit', compact('shop', 'activeTags'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        // 1. Find the specific shop being edited
+        $shop = Shop::findOrFail($id);
+
+        // 2. Validate the incoming data (same rules as when creating)
+        $validatedData = $request->validate([
+            'name' => 'required|string|max:255',
+            'mood' => 'required|in:work,eat,chill',
+            'badge' => 'required|string|max:50',
+            'emoji' => 'required|string|max:10',
+            'tagline' => 'required|string|max:255',
+            'image_url' => 'required|url',
+            'must_try' => 'required|string|max:255',
+            'maps_url' => 'required|url|max:255',
+        ]);
+
+        // 3. Update the core shop details
+        $shop->update($validatedData);
+
+        // 4. Update the Amenities (Tags)
+        // First, we wipe the old tags clean to prevent duplicates
+        $shop->vibes()->delete(); 
+        
+        // Then, if they checked any boxes, we insert the new ones
+        if ($request->has('tags')) {
+            foreach ($request->tags as $tag) {
+                $shop->vibes()->create(['tag_name' => $tag]);
+            }
+        }
+
+        // 5. Kick them back to the admin table with a success message
+        return redirect()->route('admin.index')->with('success', "{$shop->name} has been successfully updated.");
     }
 }
